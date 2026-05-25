@@ -5,14 +5,8 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/lib/auth-context";
 import { db } from "@/lib/firebase";
-import {
-  collection, query, where, getDocs, doc, updateDoc, serverTimestamp
-} from "firebase/firestore";
-import {
-  Briefcase, MapPin, Clock, ArrowRight, CheckCircle,
-  XCircle, PlusCircle, ToggleLeft, ToggleRight, Star,
-  TrendingUp, Users, AlertCircle
-} from "lucide-react";
+import { collection, query, where, getDocs, doc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { Briefcase, MapPin, Clock, ArrowRight, CheckCircle, PlusCircle, ToggleLeft, ToggleRight, Star, TrendingUp, Users, AlertCircle } from "lucide-react";
 
 const STATUS: Record<string, string> = {
   open:        "badge badge-green",
@@ -25,13 +19,13 @@ const STATUS: Record<string, string> = {
 };
 
 export default function DashboardPage() {
-  const router                                  = useRouter();
+  const router = useRouter();
   const { user, profile, loading: authLoading } = useAuth();
-  const [workerProfile, setWorkerProfile]       = useState<any>(null);
-  const [jobs, setJobs]                         = useState<any[]>([]);
-  const [applications, setApplications]         = useState<any[]>([]);
-  const [loading, setLoading]                   = useState(true);
-  const [toggling, setToggling]                 = useState(false);
+  const [workerProfile, setWorkerProfile] = useState<any>(null);
+  const [jobs, setJobs]                   = useState<any[]>([]);
+  const [applications, setApplications]   = useState<any[]>([]);
+  const [loading, setLoading]             = useState(true);
+  const [toggling, setToggling]           = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -64,20 +58,12 @@ export default function DashboardPage() {
     if (!workerProfile || toggling) return;
     setToggling(true);
     const newVal = !workerProfile.isAvailable;
-    let locationData = {};
+    let locationData: any = {};
     if (newVal && navigator.geolocation) {
       await new Promise<void>(res => {
         navigator.geolocation.getCurrentPosition(
-          pos => {
-            locationData = {
-              lat: pos.coords.latitude,
-              lng: pos.coords.longitude,
-              locationUpdatedAt: serverTimestamp(),
-            };
-            res();
-          },
-          () => res(),
-          { timeout: 5000 }
+          pos => { locationData = { lat: pos.coords.latitude, lng: pos.coords.longitude, locationUpdatedAt: serverTimestamp() }; res(); },
+          () => res(), { timeout: 5000 }
         );
       });
     }
@@ -99,23 +85,51 @@ export default function DashboardPage() {
   const isEmployer = profile?.role === "employer";
   const suspended  = profile?.suspended;
 
+  const workerQuickLinks = [
+    { href: "/jobs",          label: "Browse All Jobs",  icon: Briefcase },
+    { href: "/messages",      label: "Messages",         icon: MapPin },
+    { href: "/notifications", label: "Notifications",    icon: Clock },
+  ];
+
+  const employerQuickLinks = [
+    { href: "/jobs/new",  label: "Post a New Job", icon: PlusCircle },
+    { href: "/workers",   label: "Find Workers",   icon: Users },
+    { href: "/messages",  label: "Messages",       icon: MapPin },
+  ];
+
+  const quickLinks = isWorker ? workerQuickLinks : employerQuickLinks;
+
+  const workerStats = [
+    { icon: Briefcase,   label: "Available Jobs",  val: jobs.length,         color: "bg-blue-50 text-blue-600" },
+    { icon: CheckCircle, label: "Applications",    val: applications.length, color: "bg-green-50 text-green-600" },
+    { icon: Star,        label: "Rating",          val: workerProfile?.rating ? String(workerProfile.rating) + "★" : "New", color: "bg-yellow-50 text-yellow-600" },
+    { icon: TrendingUp,  label: "Status",          val: workerProfile?.isAvailable ? "Online" : "Offline", color: workerProfile?.isAvailable ? "bg-green-50 text-green-600" : "bg-gray-100 text-gray-500" },
+  ];
+
+  const employerStats = [
+    { icon: Briefcase,   label: "Jobs Posted",  val: jobs.length,                                           color: "bg-blue-50 text-blue-600" },
+    { icon: CheckCircle, label: "Active Jobs",  val: jobs.filter(j => j.status === "open").length,          color: "bg-green-50 text-green-600" },
+    { icon: Users,       label: "Completed",    val: jobs.filter(j => j.status === "completed").length,     color: "bg-purple-50 text-purple-600" },
+    { icon: TrendingUp,  label: "In Progress",  val: jobs.filter(j => j.status === "in_progress").length,  color: "bg-orange-50 text-orange-600" },
+  ];
+
+  const stats = isWorker ? workerStats : employerStats;
+
   return (
     <div className="min-h-screen bg-lgray">
       <Navbar />
       <div className="section-container pt-28 pb-16">
 
-        {/* Suspended banner */}
         {suspended && (
           <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-4 mb-6 flex items-start gap-3">
             <AlertCircle size={18} className="text-red-500 flex-shrink-0 mt-0.5" />
             <div>
               <p className="font-semibold text-red-700 text-sm">Account Suspended</p>
-              <p className="text-red-600 text-xs mt-0.5">Your account has been suspended. Contact legal@handza.lk for assistance.</p>
+              <p className="text-red-600 text-xs mt-0.5">Contact legal@handza.lk for assistance.</p>
             </div>
           </div>
         )}
 
-        {/* Header */}
         <div className="flex items-start justify-between flex-wrap gap-4 mb-8">
           <div>
             <span className="text-handza font-semibold text-xs uppercase tracking-widest">Dashboard</span>
@@ -126,19 +140,16 @@ export default function DashboardPage() {
           </div>
           <div className="flex gap-3">
             {isWorker && workerProfile && (
-              <button onClick={toggleAvailability} disabled={toggling || suspended}
+              <button onClick={toggleAvailability} disabled={toggling || !!suspended}
                 className={`flex items-center gap-2.5 px-5 py-3 rounded-2xl font-heading font-semibold text-sm transition-all shadow-sm disabled:opacity-60 ${
                   workerProfile.isAvailable
                     ? "bg-green-500 text-white shadow-green-200"
                     : "bg-white border-2 border-gray-200 text-gray-600 hover:border-navy"
                 }`}>
-                {toggling ? (
-                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                ) : workerProfile.isAvailable ? (
-                  <ToggleRight size={20} />
-                ) : (
-                  <ToggleLeft size={20} />
-                )}
+                {toggling
+                  ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  : workerProfile.isAvailable ? <ToggleRight size={20} /> : <ToggleLeft size={20} />
+                }
                 {workerProfile.isAvailable ? "Available Now" : "Go Available"}
               </button>
             )}
@@ -150,7 +161,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Verification banner */}
         {!profile?.nicVerified && !suspended && (
           <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mb-6 flex items-start gap-3">
             <AlertCircle size={18} className="text-amber-500 flex-shrink-0 mt-0.5" />
@@ -158,25 +168,12 @@ export default function DashboardPage() {
               <p className="font-semibold text-amber-800 text-sm">Complete your verification</p>
               <p className="text-amber-700 text-xs mt-0.5">Upload your NIC to get verified and unlock all features.</p>
             </div>
-            <Link href="/profile" className="text-xs font-semibold text-amber-700 hover:underline flex-shrink-0">
-              Verify now →
-            </Link>
+            <Link href="/profile" className="text-xs font-semibold text-amber-700 hover:underline flex-shrink-0">Verify now →</Link>
           </div>
         )}
 
-        {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-          {isWorker ? [
-            { icon: Briefcase,   label: "Available Jobs",   val: jobs.length,        color: "bg-blue-50 text-blue-600" },
-            { icon: CheckCircle, label: "Applications",      val: applications.length, color: "bg-green-50 text-green-600" },
-            { icon: Star,        label: "Rating",            val: workerProfile?.rating ? `${workerProfile.rating}★` : "New", color: "bg-yellow-50 text-yellow-600" },
-            { icon: TrendingUp,  label: "Status",            val: workerProfile?.isAvailable ? "Online" : "Offline", color: workerProfile?.isAvailable ? "bg-green-50 text-green-600" : "bg-gray-100 text-gray-500" },
-          ] : [
-            { icon: Briefcase,   label: "Jobs Posted",   val: jobs.length,                              color: "bg-blue-50 text-blue-600" },
-            { icon: CheckCircle, label: "Active Jobs",   val: jobs.filter(j => j.status === "open").length, color: "bg-green-50 text-green-600" },
-            { icon: Users,       label: "Completed",     val: jobs.filter(j => j.status === "completed").length, color: "bg-purple-50 text-purple-600" },
-            { icon: TrendingUp,  label: "In Progress",   val: jobs.filter(j => j.status === "in_progress").length, color: "bg-orange-50 text-orange-600" },
-          ].map(({ icon: Icon, label, val, color }) => (
+          {stats.map(({ icon: Icon, label, val, color }) => (
             <div key={label} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
               <div className={`w-9 h-9 ${color} rounded-xl flex items-center justify-center mb-3`}>
                 <Icon size={18} />
@@ -187,18 +184,14 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* Main content */}
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Jobs list */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                 <h2 className="font-heading font-bold text-navy text-sm">
                   {isWorker ? "Available Jobs Near You" : "My Job Posts"}
                 </h2>
-                <Link href={isWorker ? "/jobs" : "/jobs"} className="text-xs text-handza hover:underline font-medium">
-                  View all →
-                </Link>
+                <Link href="/jobs" className="text-xs text-handza hover:underline font-medium">View all →</Link>
               </div>
               {jobs.length === 0 ? (
                 <div className="text-center py-12">
@@ -224,9 +217,7 @@ export default function DashboardPage() {
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-gray-800 truncate group-hover:text-navy">{job.title}</p>
                           <div className="flex items-center gap-3 mt-0.5">
-                            <span className="text-xs text-gray-400 flex items-center gap-1">
-                              <MapPin size={11} />{job.location}
-                            </span>
+                            <span className="text-xs text-gray-400 flex items-center gap-1"><MapPin size={11} />{job.location}</span>
                             <span className="text-xs text-handza font-semibold">LKR {job.payRate}/{job.payType}</span>
                           </div>
                         </div>
@@ -243,9 +234,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-4">
-            {/* Profile card */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-12 h-12 bg-handza rounded-2xl flex items-center justify-center text-white font-bold text-lg shadow-orange">
@@ -266,7 +255,7 @@ export default function DashboardPage() {
                 {isWorker && (
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-gray-500">Status</span>
-                    <span className={workerProfile?.isAvailable ? "badge badge-green" : "badge-gray text-gray-500 text-xs"}>
+                    <span className={workerProfile?.isAvailable ? "badge badge-green" : "text-gray-500 text-xs"}>
                       {workerProfile?.isAvailable ? "● Available" : "○ Offline"}
                     </span>
                   </div>
@@ -277,19 +266,10 @@ export default function DashboardPage() {
               </Link>
             </div>
 
-            {/* Quick links */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
               <p className="font-heading font-bold text-navy text-sm mb-3">Quick Actions</p>
               <div className="space-y-2">
-                {isWorker ? [
-                  { href: "/jobs",          label: "Browse All Jobs", icon: Briefcase },
-                  { href: "/messages",      label: "Messages",        icon: MapPin },
-                  { href: "/notifications", label: "Notifications",   icon: Clock },
-                ] : [
-                  { href: "/jobs/new",      label: "Post a New Job",  icon: PlusCircle },
-                  { href: "/workers",       label: "Find Workers",    icon: Users },
-                  { href: "/messages",      label: "Messages",        icon: MapPin },
-                ]}.map(({ href, label, icon: Icon }) => (
+                {quickLinks.map(({ href, label, icon: Icon }) => (
                   <Link key={href} href={href}
                     className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm text-gray-600 hover:bg-lgray hover:text-navy transition-colors">
                     <Icon size={15} className="text-gray-400" /> {label}
