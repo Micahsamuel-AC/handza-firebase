@@ -1,0 +1,52 @@
+"use client";
+import { createContext, useContext, useEffect, useState } from "react";
+import { onAuthStateChanged, User } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
+import { Profile } from "@/lib/types";
+
+interface AuthContextType {
+  user:            User | null;
+  profile:         (Profile & { id: string }) | null;
+  loading:         boolean;
+  refreshProfile:  () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType>({
+  user: null, profile: null, loading: true,
+  refreshProfile: async () => {},
+});
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser]       = useState<User | null>(null);
+  const [profile, setProfile] = useState<(Profile & { id: string }) | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  async function loadProfile(uid: string) {
+    const snap = await getDoc(doc(db, "profiles", uid));
+    if (snap.exists()) setProfile({ id: snap.id, ...snap.data() } as Profile & { id: string });
+    else setProfile(null);
+  }
+
+  async function refreshProfile() {
+    if (user) await loadProfile(user.uid);
+  }
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async u => {
+      setUser(u);
+      if (u) await loadProfile(u.uid);
+      else setProfile(null);
+      setLoading(false);
+    });
+    return () => unsub();
+  }, []);
+
+  return (
+    <AuthContext.Provider value={{ user, profile, loading, refreshProfile }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export const useAuth = () => useContext(AuthContext);
