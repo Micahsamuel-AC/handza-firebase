@@ -3,13 +3,28 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import { Profile } from "@/lib/types";
+
+export interface Profile {
+  id:            string;
+  fullName:      string;
+  email:         string;
+  phone:         string;
+  location:      string;
+  bio:           string;
+  role:          string;
+  roles?:        string[];
+  activeRole?:   string;
+  nicVerified?:  boolean;
+  suspended?:    boolean;
+  agreedToTerms?: boolean;
+  createdAt?:    any;
+}
 
 interface AuthContextType {
-  user:            User | null;
-  profile:         (Profile & { id: string }) | null;
-  loading:         boolean;
-  refreshProfile:  () => Promise<void>;
+  user:           User | null;
+  profile:        Profile | null;
+  loading:        boolean;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -19,13 +34,16 @@ const AuthContext = createContext<AuthContextType>({
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser]       = useState<User | null>(null);
-  const [profile, setProfile] = useState<(Profile & { id: string }) | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
   async function loadProfile(uid: string) {
     const snap = await getDoc(doc(db, "profiles", uid));
-    if (snap.exists()) setProfile({ id: snap.id, ...snap.data() } as Profile & { id: string });
-    else setProfile(null);
+    if (snap.exists()) {
+      setProfile({ id: snap.id, ...snap.data() } as Profile);
+    } else {
+      setProfile(null);
+    }
   }
 
   async function refreshProfile() {
