@@ -1,6 +1,8 @@
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import HANDZALogo from "@/components/HANDZALogo";
+import UpcomingFeatures from "@/components/UpcomingFeatures";
+
 import {
   ArrowRight, CheckCircle, Star, Zap, Shield,
   Users, Briefcase, MapPin, Clock, BadgeCheck,
