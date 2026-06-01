@@ -376,6 +376,10 @@ export default function HomePage() {
         </div>
       </section>
 
+{/* ═══ CTA ════════════════════════════════════════════ */}
+<section className="py-28 bg-navy
+
+      
       {/* ═══ CTA ════════════════════════════════════════════ */}
       <section className="py-28 bg-navy relative overflow-hidden">
         <div className="absolute inset-0 dot-pattern" />
